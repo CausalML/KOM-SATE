@@ -1,0 +1,137 @@
+
+
+
+
+
+#Clear existing data and graphics
+rm(list=ls())
+graphics.off()
+
+#install.packages("Gmisc")
+#install.packages("sjlabelled")
+library(Gmisc)
+#library(sjlabelled)
+
+
+#setwd("~/Desktop/spine-surgery-analytics-de7d8319fa38b6c08b5fa067151d67c79bae0340")
+setwd("~/Desktop/Github/KOM-SATE/RCode/Case-Study")
+setwd("~/Google Drive/Cornell/Github/KOM-SATE/RCode/Case-Study")
+source("data_clean.R")
+
+#I keep the long shape just in case
+data_long <- data
+#View(data_long)
+
+#########################################################################################################
+#########################################################################################################
+#
+# RESHAPE
+#
+#########################################################################################################
+#########################################################################################################
+
+data <- reshape(data, idvar = "ID", timevar = "visit", direction = "wide")
+#View(data)
+
+data <- data[which(data$primary_revision.factor.1=="Primary"),]
+
+data$total_odi_sum_score_int.2 <- data$total_odi_sum_score_int.2/0.5
+
+data <- data.frame(data$principal_spine_diagnosis___3.factor.1,
+                   data$principal_spine_diagnosis___4.factor.1, 
+                   
+                   data$activity_out_home.factor.1,
+                   data$activity_inside_home.factor.1,
+                   data$anxiety.factor.1,
+                   data$depression.factor.1, 
+                   
+                   data$dominant_symptom1.factor.1,
+                   data$motor_def2.factor.1,
+                   
+                   
+                   data$ID,
+                   data$laminectomy_performed.factor.2,
+                   data$arthrodesis_performed.factor.2,
+                   data$symptom_duration2.factor.1,
+                   
+                   data$return_to_activities.factor.2,
+                   data$total_odi_sum_score_int.2,
+                   
+                   data$leg_pain_vas1.1,
+                   data$back_pain_vas.1,
+                   data$leg_pain_vas1.factor.1,
+                   data$back_pain_vas.factor.1)
+
+data <- data[complete.cases(data),]
+
+data$intervention <- rep(NA,dim(data)[1])
+data$intervention[ which(data$data.laminectomy_performed.factor.2=="Yes") ] <- 0
+data$intervention[ which(data$data.arthrodesis_performed.factor.2=="Yes") ] <- 1
+data$intervention <- factor(data$intervention,
+                            levels=c("0","1"),
+                            labels=c("Laminectomy", "(Arthrodesis+Laminectomy) OR (Arthrodesis Only)"))
+
+table(data$intervention)
+
+#I need to remove those with No laminectomy and No arthrodesis
+data <- data[complete.cases(data),]
+dim(data)
+
+
+
+#########################################################################################################
+#KOM
+source("spine_functions_3_overploly_d.R")
+
+confounders <- as.matrix(data.frame(
+  as.numeric(data$data.principal_spine_diagnosis___3.factor.1), 
+  as.numeric(data$data.principal_spine_diagnosis___4.factor.1), 
+  
+  as.numeric(data$data.activity_out_home.factor.1),
+  as.numeric(data$data.activity_inside_home.factor.1),
+  as.numeric(data$data.dominant_symptom1.factor.1),
+  as.numeric(data$data.motor_def2.factor.1),
+  as.numeric(data$data.symptom_duration2.factor.1),
+  
+  as.numeric(data$data.leg_pain_vas1.1),
+  as.numeric(data$data.back_pain_vas.1)
+))
+
+Tr <- NULL
+Tr[ which(data$intervention=="Laminectomy") ] <- 0
+Tr[ which(data$intervention=="(Arthrodesis+Laminectomy) OR (Arthrodesis Only)") ] <- 1
+
+data$Tr <- Tr
+
+outcome <- as.numeric(data$data.total_odi_sum_score_int.2)
+intervention <- data$Tr
+
+i <- 0 
+
+FIT <- FIT_SE <- NULL
+
+for(degree in seq(1,5,length.out=5) ){
+    i <- i + 1
+    print(i)
+    result_kom <- KOM(outcome,intervention,confounders,Type_kernel=3,hpara=c(1,1,1),GPML=1,degree=degree)
+    kow <- result_kom$kow
+    
+    ###################################################################
+    #MSMS - KOW
+    fitmsm_kow <- lm(data.total_odi_sum_score_int.2 ~ intervention 
+                     ,weights=kow,data=data)
+    
+    FIT[i] <- (fitmsm_kow$coef)[2]
+    FIT_SE[i] <- sqrt(diag(sandwich(fitmsm_kow)))[2]
+
+}
+
+FIT
+FIT_SE
+FIT-qnorm(0.975)*FIT_SE
+FIT+qnorm(0.975)*FIT_SE
+
+#print(paste(" LB ", (fitmsm_kow$coef[2]-qnorm(0.975)*sqrt(diag(sandwich(fitmsm_kow)))[2]), " UB ", (fitmsm_kow$coef[2]+qnorm(0.975)*sqrt(diag(sandwich(fitmsm_kow)))[2])))
+
+
+
