@@ -1,6 +1,11 @@
+## Replication code for *Kernel Optimal Orthogonality Weighting for Estimating Effects of Continuous Treatments*
 
+## arXiv link
+<https://arxiv.org/abs/1811.04274>
 
-Simulations
+## Code description
+
+### Simulations
 
 We have 4 scenarios: Correct linear, correct nonlinear, Misspecified linear and misspecified nonlinear.
 For each scenario we have
@@ -12,7 +17,8 @@ Similar setting for Fig 3.
 
 the "data" folder contains the final Rdata files used to generate all the figures.
 
+### Case-study
 
-Case-study
+R code for the analyses is included. Data set is not include because it is a restricted-access dataset.
 
-R code for the analyses. We did not include the actual data because it is not a public dataset.
+
