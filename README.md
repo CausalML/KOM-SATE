@@ -1,4 +1,4 @@
-## Replication code for *Kernel Optimal Orthogonality Weighting for Estimating Effects of Continuous Treatments*
+## Replication code for *More robust estimation of sample average treatment effects using Kernel Optimal Matching in an observational study of spine surgical interventions*
 
 ## arXiv link
 <https://arxiv.org/abs/1811.04274>
